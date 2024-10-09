@@ -1,11 +1,14 @@
 /* eslint-disable prefer-const */
 /* eslint-disable no-prototype-builtins */
+/* eslint-disable camelcase */
+
 import { type ClassValue, clsx } from "clsx";
-import qs from 'qs';
+import qs from "qs";
 import { twMerge } from "tailwind-merge";
 
 import { aspectRatioOptions } from "@/constants";
 
+// Utility function to merge Tailwind CSS classes
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -53,6 +56,12 @@ export const dataUrl = `data:image/svg+xml;base64,${toBase64(
 // ==== End
 
 // FORM URL QUERY
+interface FormUrlQueryParams {
+  searchParams: URLSearchParams;
+  key: string;
+  value: string;
+}
+
 export const formUrlQuery = ({
   searchParams,
   key,
@@ -66,11 +75,16 @@ export const formUrlQuery = ({
 };
 
 // REMOVE KEY FROM QUERY
+interface RemoveUrlQueryParams {
+  searchParams: URLSearchParams;
+  keysToRemove: string[];
+}
+
 export function removeKeysFromQuery({
   searchParams,
   keysToRemove,
 }: RemoveUrlQueryParams) {
-  const currentUrl = qs.parse(searchParams);
+  const currentUrl = qs.parse(searchParams.toString());
 
   keysToRemove.forEach((key) => {
     delete currentUrl[key];
@@ -85,19 +99,26 @@ export function removeKeysFromQuery({
 }
 
 // DEBOUNCE
-export const debounce = (func: (...args: any[]) => void, delay: number) => {
+export const debounce = (func: (...args: unknown[]) => void, delay: number) => {
   let timeoutId: NodeJS.Timeout | null;
-  return (...args: any[]) => {
+  return (...args: unknown[]) => {
     if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func.apply(null, args), delay);
+    timeoutId = setTimeout(() => func(...args), delay); // Spread operator used here instead of apply
   };
 };
 
-// GE IMAGE SIZE
+// GET IMAGE SIZE
 export type AspectRatioKey = keyof typeof aspectRatioOptions;
+
+interface Image {
+  aspectRatio?: string;
+  width?: number;
+  height?: number;
+}
+
 export const getImageSize = (
   type: string,
-  image: any,
+  image: Image,
   dimension: "width" | "height"
 ): number => {
   if (type === "fill") {
@@ -130,25 +151,34 @@ export const download = (url: string, filename: string) => {
     .catch((error) => console.log({ error }));
 };
 
-// DEEP MERGE OBJECTS
-export const deepMergeObjects = (obj1: any, obj2: any) => {
-  if(obj2 === null || obj2 === undefined) {
+export const deepMergeObjects = <T extends Record<string, unknown>>(
+  obj1: T,
+  obj2: Partial<T>
+): T => {
+  // If obj2 is null or undefined, return obj1 as the final merged object
+  if (obj2 === null || obj2 === undefined) {
     return obj1;
   }
 
-  let output = { ...obj2 };
+  // Start with a copy of obj1, so we always have the required fields from obj1
+  const output = { ...obj1 };
 
   for (let key in obj1) {
     if (obj1.hasOwnProperty(key)) {
       if (
-        obj1[key] &&
         typeof obj1[key] === "object" &&
-        obj2[key] &&
-        typeof obj2[key] === "object"
+        obj1[key] !== null &&
+        typeof obj2[key] === "object" &&
+        obj2[key] !== null
       ) {
-        output[key] = deepMergeObjects(obj1[key], obj2[key]);
-      } else {
-        output[key] = obj1[key];
+        // Recursively merge the objects if both obj1[key] and obj2[key] are objects
+        output[key] = deepMergeObjects(
+          obj1[key] as Record<string, unknown>,
+          obj2[key] as Record<string, unknown>
+        ) as T[Extract<keyof T, string>];
+      } else if (obj2[key] !== undefined) {
+        // If obj2 has the key, use it, otherwise keep obj1's value
+        output[key] = obj2[key] as T[Extract<keyof T, string>];
       }
     }
   }
