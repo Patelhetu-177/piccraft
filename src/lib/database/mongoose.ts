@@ -1,36 +1,29 @@
-import mongoose, { Mongoose } from 'mongoose';
+import mongoose from 'mongoose';
 
-const MONGODB_URL = process.env.MONGODB_URL;
-
-interface MongooseConnection {
-  conn: Mongoose | null;
-  promise: Promise<Mongoose> | null;
-}
-
-
-let mongooseVar: MongooseConnection | undefined;
-
-let cached: MongooseConnection = mongooseVar || { conn: null, promise: null };
-
-if(!cached) {
-  cached = mongooseVar = { 
-    conn: null, promise: null 
-  }
-}
-
+let initialized = false;
 
 export const connectToDatabase = async () => {
-  if(cached.conn) return cached.conn;
+  mongoose.set('strictQuery', true);
 
-  if(!MONGODB_URL) throw new Error('Missing MONGODB_URL');
+  if (initialized) {
+    console.log('MongoDB already connected');
+    return;
+  }
 
-  cached.promise = 
-    cached.promise || 
-    mongoose.connect(MONGODB_URL, { 
-      dbName: 'piccraft', bufferCommands: false 
-    })
+  const mongoUrl = process.env.MONGODB_URL;
+  
+  if (!mongoUrl) {
+    throw new Error('MONGODB_URL is not defined in environment variables');
+  }
 
-  cached.conn = await cached.promise;
-
-  return cached.conn;
-}
+  try {
+    await mongoose.connect(mongoUrl, {
+      dbName: 'piccraft',
+      bufferCommands: false 
+    });
+    console.log('MongoDB connected');
+    initialized = true;
+  } catch (error) {
+    console.log('MongoDB connection error:', error);
+  }
+};
