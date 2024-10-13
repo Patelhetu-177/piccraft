@@ -7,9 +7,9 @@ interface MongooseConnection {
   promise: Promise<Mongoose> | null;
 }
 
-// declare global {
-  let mongooseVar: MongooseConnection | undefined;
-// }
+
+let mongooseVar: MongooseConnection | undefined;
+
 let cached: MongooseConnection = mongooseVar || { conn: null, promise: null };
 
 if(!cached) {
@@ -19,8 +19,6 @@ if(!cached) {
 }
 
 
-// let cached: MongooseConnection = (global as any).mongoose
-
 export const connectToDatabase = async () => {
   if(cached.conn) return cached.conn;
 
@@ -29,7 +27,7 @@ export const connectToDatabase = async () => {
   cached.promise = 
     cached.promise || 
     mongoose.connect(MONGODB_URL, { 
-      dbName: 'PICcraft', bufferCommands: false 
+      dbName: 'piccraft', bufferCommands: false 
     })
 
   cached.conn = await cached.promise;
